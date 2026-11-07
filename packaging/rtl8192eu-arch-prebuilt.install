@@ -1,0 +1,21 @@
+pre_install() {
+  if [ -f /usr/lib/modules/7.0.12-arch1-1/updates/dkms/8192eu.ko.zst ]; then
+    echo "AVISO: también existe el módulo DKMS en updates/dkms/8192eu.ko.zst."
+    echo "Este paquete instala otro 8192eu.ko.zst en updates/. Usa solo uno."
+  fi
+}
+
+post_install() {
+  depmod -a 7.0.12-arch1-1 || true
+  echo "Módulo RTL8192EU precompilado instalado para linux 7.0.12-arch1-1."
+  echo "Para cargarlo ahora (corta la WiFi): sudo modprobe -r 8192eu && sudo modprobe 8192eu"
+  echo "O reinicia el equipo."
+}
+
+post_upgrade() {
+  post_install
+}
+
+post_remove() {
+  depmod -a 7.0.12-arch1-1 || true
+}

@@ -1,0 +1,4 @@
+*.pkg.tar.zst
+8192eu.ko.zst
+pkg/
+src/

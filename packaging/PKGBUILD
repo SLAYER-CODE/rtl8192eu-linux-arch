@@ -1,0 +1,18 @@
+# Maintainer: SLAYER-CODE <1edw333@gmail.com>
+pkgname=rtl8192eu-arch-prebuilt
+pkgver=1.0
+pkgrel=1
+pkgdesc='Precompiled RTL8192EU WiFi driver for linux 7.0.12.arch1-1 (clnhub ed48fb9 + MAC/monitor patches)'
+arch=('x86_64')
+url='https://github.com/SLAYER-CODE/rtl8192eu-linux-arch'
+license=('GPL2')
+depends=('linux=7.0.12.arch1-1')
+options=('!strip' '!debug')
+install="$pkgname.install"
+source=('8192eu.ko.zst')
+sha256sums=('308530c8c714e5eeef9f7af1ecfa19ab345540dd98d210f2d90b399c41217e93')
+
+package() {
+  install -Dm644 "$srcdir/8192eu.ko.zst" \
+    "$pkgdir/usr/lib/modules/7.0.12-arch1-1/updates/8192eu.ko.zst"
+}
