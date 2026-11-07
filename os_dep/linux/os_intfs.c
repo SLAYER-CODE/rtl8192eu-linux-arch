@@ -1549,24 +1549,18 @@ static int rtw_net_set_mac_address(struct net_device *pnetdev, void *addr)
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(pnetdev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	struct sockaddr *sa = (struct sockaddr *)addr;
-	int ret = -1;
 
-	/* only the net_device is in down state to permit modifying mac addr */
-	if ((pnetdev->flags & IFF_UP) == _TRUE) {
-		RTW_INFO(FUNC_ADPT_FMT": The net_device's is not in down state\n"
-			 , FUNC_ADPT_ARG(padapter));
-
-		return ret;
-	}
-
-	/* if the net_device is linked, it's not permit to modify mac addr */
+	/* NetworkManager changes and restores the MAC while the interface is up
+	 * and/or scanning. Refusing those operations leaves the device in a
+	 * "config-failed" state. Only block changes while a link/association is
+	 * in progress, because changing the MAC then would break the connection.
+	 */
 	if (check_fwstate(pmlmepriv, WIFI_UNDER_LINKING) ||
-	    check_fwstate(pmlmepriv, WIFI_ASOC_STATE) ||
-	    check_fwstate(pmlmepriv, WIFI_UNDER_SURVEY)) {
+	    check_fwstate(pmlmepriv, WIFI_ASOC_STATE)) {
 		RTW_INFO(FUNC_ADPT_FMT": The net_device's is not idle currently\n"
 			 , FUNC_ADPT_ARG(padapter));
 
-		return ret;
+		return -EBUSY;
 	}
 
 	/* check whether the input mac address is valid to permit modifying mac addr */
@@ -1574,7 +1568,7 @@ static int rtw_net_set_mac_address(struct net_device *pnetdev, void *addr)
 		RTW_INFO(FUNC_ADPT_FMT": Invalid Mac Addr for "MAC_FMT"\n"
 			 , FUNC_ADPT_ARG(padapter), MAC_ARG(sa->sa_data));
 
-		return ret;
+		return -EADDRNOTAVAIL;
 	}
 
 	_rtw_memcpy(adapter_mac_addr(padapter), sa->sa_data, ETH_ALEN); /* set mac addr to adapter */
@@ -1584,7 +1578,6 @@ static int rtw_net_set_mac_address(struct net_device *pnetdev, void *addr)
 	_rtw_memcpy(pnetdev->dev_addr, sa->sa_data, ETH_ALEN); /* set mac addr to net_device */
 #endif
 
-#if 0
 	if (rtw_is_hw_init_completed(padapter)) {
 		rtw_ps_deny(padapter, PS_DENY_IOCTL);
 		LeaveAllPowerSaveModeDirect(padapter); /* leave PS mode for guaranteeing to access hw register successfully */
@@ -1597,23 +1590,11 @@ static int rtw_net_set_mac_address(struct net_device *pnetdev, void *addr)
 
 		rtw_ps_deny_cancel(padapter, PS_DENY_IOCTL);
 	}
-#else
-	rtw_ps_deny(padapter, PS_DENY_IOCTL);
-	LeaveAllPowerSaveModeDirect(padapter); /* leave PS mode for guaranteeing to access hw register successfully */
-#ifdef CONFIG_MI_WITH_MBSSID_CAM
-	rtw_hal_change_macaddr_mbid(padapter, sa->sa_data);
-#else
-	rtw_hal_set_hwreg(padapter, HW_VAR_MAC_ADDR, sa->sa_data); /* set mac addr to mac register */
-#endif
-	rtw_ps_deny_cancel(padapter, PS_DENY_IOCTL);
-#endif
 
 	RTW_INFO(FUNC_ADPT_FMT": Set Mac Addr to "MAC_FMT" Successfully\n"
 		 , FUNC_ADPT_ARG(padapter), MAC_ARG(sa->sa_data));
 
-	ret = 0;
-
-	return ret;
+	return 0;
 }
 
 static struct net_device_stats *rtw_net_get_stats(struct net_device *pnetdev)
